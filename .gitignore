@@ -1,0 +1,10 @@
+venv
+
+__pycache__
+
+# The idea here is to not push dags into remote repo.
+# The user will be creating the dags dynamically as they execute the stress test.
+dags/*
+
+logs/*
+plugins/*
