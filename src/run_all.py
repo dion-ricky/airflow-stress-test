@@ -72,6 +72,7 @@ def delete_all_dag_run_of_dag(dag_id: str):
 def delete_dag_run(dag_id, dag_run_id):
     resp = session.delete(
         url=base_url + "/dags/" + dag_id + "/dagRuns/" + dag_run_id,
+        data=json.dumps({}),
     )
     resp.raise_for_status()
 

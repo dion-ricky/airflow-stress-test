@@ -79,8 +79,8 @@ airflowVersion: "2.9.3"
 # Images
 images:
   airflow:
-    repository: ~
-    tag: ~
+    repository: us-central1-docker.pkg.dev/dionricky-personal/airflow/airflow-stress-test
+    tag: latest
     # Specifying digest takes precedence over tag.
     digest: ~
     pullPolicy: IfNotPresent
@@ -264,7 +264,7 @@ rbac:
 
 # Airflow executor
 # One of: LocalExecutor, LocalKubernetesExecutor, CeleryExecutor, KubernetesExecutor, CeleryKubernetesExecutor
-executor: "LocalExecutor"
+executor: "CeleryExecutor"
 
 # If this is true and using LocalExecutor/KubernetesExecutor/CeleryKubernetesExecutor, the scheduler's
 # service account will have access to communicate with the api-server and launch pods.
@@ -273,9 +273,11 @@ executor: "LocalExecutor"
 allowPodLaunching: true
 
 # Environment variables for all airflow containers
-env: []
-# - name: ""
-#   value: ""
+env:
+  - name: "PYTHONPATH"
+    value: "/opt/airflow/src"
+  - name: "AIRFLOW__API__AUTH_BACKENDS"
+    value: "airflow.api.auth.backend.basic_auth"
 
 # Volumes for all airflow containers
 volumes: []
@@ -434,7 +436,7 @@ fernetKey: ~
 fernetKeySecretName: ~
 
 # Flask secret key for Airflow Webserver: `[webserver] secret_key` in airflow.cfg
-webserverSecretKey: ~
+webserverSecretKey: '10f793eafc3801bda9687ae581e335ed'
 webserverSecretKeySecretName: ~
 
 # In order to use kerberos you need to create secret containing the keytab file
@@ -560,7 +562,7 @@ workers:
 
   # Allow KEDA autoscaling.
   keda:
-    enabled: false
+    enabled: true
     namespaceLabels: {}
 
     # How often KEDA polls the airflow DB to report new scale requests to the HPA
@@ -677,7 +679,7 @@ workers:
   resources:
    limits:
     cpu: 2000m
-    memory: 1024Mi
+    memory: 4096Mi
    requests:
     cpu: 1000m
     memory: 1024Mi
@@ -825,8 +827,8 @@ scheduler:
   # Wait for at most 1 minute (6*10s) for the scheduler container to startup.
   # livenessProbe kicks in after the first successful startupProbe
   startupProbe:
-    failureThreshold: 6
-    periodSeconds: 10
+    failureThreshold: 5
+    periodSeconds: 60
     timeoutSeconds: 20
     command: ~
 
@@ -890,7 +892,7 @@ scheduler:
   resources:
    limits:
     cpu: 2000m
-    memory: 1024Mi
+    memory: 4096Mi
    requests:
     cpu: 1000m
     memory: 1024Mi
@@ -989,21 +991,22 @@ createUserJob:
     - "-c"
     # The format below is necessary to get `helm lint` happy
     - |-
-      exec \
-      airflow {{ semverCompare ">=2.0.0" .Values.airflowVersion | ternary "users create" "create_user" }} "$@"
-    - --
-    - "-r"
-    - "{{ .Values.webserver.defaultUser.role }}"
-    - "-u"
-    - "{{ .Values.webserver.defaultUser.username }}"
-    - "-e"
-    - "{{ .Values.webserver.defaultUser.email }}"
-    - "-f"
-    - "{{ .Values.webserver.defaultUser.firstName }}"
-    - "-l"
-    - "{{ .Values.webserver.defaultUser.lastName }}"
-    - "-p"
-    - "{{ .Values.webserver.defaultUser.password }}"
+      echo hello
+    #   exec \
+    #   airflow {{ semverCompare ">=2.0.0" .Values.airflowVersion | ternary "users create" "create_user" }} "$@"
+    # - --
+    # - "-r"
+    # - "{{ .Values.webserver.defaultUser.role }}"
+    # - "-u"
+    # - "{{ .Values.webserver.defaultUser.username }}"
+    # - "-e"
+    # - "{{ .Values.webserver.defaultUser.email }}"
+    # - "-f"
+    # - "{{ .Values.webserver.defaultUser.firstName }}"
+    # - "-l"
+    # - "{{ .Values.webserver.defaultUser.lastName }}"
+    # - "-p"
+    # - "{{ .Values.webserver.defaultUser.password }}"
 
   # Annotations on the create user job pod
   annotations: {}
@@ -1380,10 +1383,10 @@ webserver:
   resources:
     limits:
       cpu: 1000m
-      memory: 1024Mi
+      memory: 4096Mi
     requests:
       cpu: 1000m
-      memory: 1024Mi
+      memory: 2048Mi
 
   # Create initial user.
   defaultUser:
@@ -1759,7 +1762,7 @@ dagProcessor:
   resources:
    limits:
     cpu: 2000m
-    memory: 1024Mi
+    memory: 2048Mi
    requests:
     cpu: 1000m
     memory: 1024Mi
@@ -2263,7 +2266,7 @@ pgbouncer:
 
 # Configuration for the redis provisioned by the chart
 redis:
-  enabled: false
+  enabled: true
   terminationGracePeriodSeconds: 600
 
   # Annotations for Redis Statefulset
@@ -2301,7 +2304,7 @@ redis:
   resources:
    limits:
     cpu: 2000m
-    memory: 1024Mi
+    memory: 2048Mi
    requests:
     cpu: 1000m
     memory: 1024Mi
@@ -2502,9 +2505,9 @@ config:
     enable_proxy_fix: 'True'
     # For Airflow 1.10
     rbac: 'True'
-  # celery:
+  celery:
   #   flower_url_prefix: '{{ ternary "" .Values.ingress.flower.path (eq .Values.ingress.flower.path "/") }}'
-  #   worker_concurrency: 16
+    worker_concurrency: 16
   scheduler:
     standalone_dag_processor: '{{ ternary "True" "False" .Values.dagProcessor.enabled }}'
     # statsd params included for Airflow 1.10 backward compatibility; moved to [metrics] in 2.0
@@ -2588,7 +2591,7 @@ dags:
     # Annotations for dags PVC
     annotations: {}
     # Enable persistent volume for storing dags
-    enabled: true
+    enabled: false
     # Volume size for dags
     # size: 1Gi
     # If using a custom storageClass, pass name here
@@ -2596,7 +2599,7 @@ dags:
     # access mode of the persistent volume
     accessMode: ReadWriteOnce
     ## the name of an existing PVC to use
-    existingClaim: airflow-dags-pvc
+    existingClaim:
     ## optional subpath for dag volume mount
     subPath: ~
   gitSync:
@@ -2729,4 +2732,3 @@ logs:
     storageClassName:
     ## the name of an existing PVC to use
     existingClaim:
-

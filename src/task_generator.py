@@ -68,8 +68,9 @@ def generate_cpu_task(seed, dag) -> BaseOperator:
     return PythonOperator(
         task_id=rand_id(seed) + "_b",
         python_callable=fib,
-        op_args=(rand_num(seed, 35, 45),),
+        op_args=(rand_num(seed, 15, 20),),
         dag=dag,
+        retries=25,
     )
 
 
@@ -77,8 +78,9 @@ def generate_mem_task(seed, dag) -> BaseOperator:
     return PythonOperator(
         task_id=rand_id(seed) + "_m",
         python_callable=use_lots_of_memory,
-        op_args=(rand_num(seed, 150000, 750000),),
+        op_args=(rand_num(seed, 50000, 150000),),
         dag=dag,
+        retries=25,
     )
 
 
@@ -88,6 +90,7 @@ def generate_waiting_task(seed, dag) -> BaseOperator:
         python_callable=wait,
         op_args=(rand_num(seed, 5, 45),),
         dag=dag,
+        retries=25,
     )
 
 
@@ -98,6 +101,7 @@ def generate_sensor_task(seed, dag) -> BaseOperator:
         external_task_id=rand_id(seed) + "_e2",
         allowed_states=["success"],
         dag=dag,
+        retries=25,
     )
 
 
@@ -105,6 +109,7 @@ def generate_empty_task(seed, dag, suffix="") -> BaseOperator:
     return EmptyOperator(
         task_id=rand_id(seed) + "_e" + suffix,
         dag=dag,
+        retries=25,
     )
 
 
